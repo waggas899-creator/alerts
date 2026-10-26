@@ -11,7 +11,7 @@
     { id: 'vip', name: 'الدخول المميز', ic: 'meeting_room', kind: 'pop' },
     { id: 'honor', name: 'درع التكريم', ic: 'shield', kind: 'pop' }];
   const A = id => ALERTS.find(a => a.id === id);
-  const FRAMES = [['royal', 'ملكي'], ['rosette', 'نجمة عربية'], ['sun', 'شمس'], ['gear', 'ترس'], ['laurel', 'غار'], ['electric', 'صاعقة'], ['pearl', 'لؤلؤ'], ['hex', 'سداسي']];
+  const FRAMES = [['medal', 'ميدالية الشريط'], ['royal', 'ملكي'], ['rosette', 'نجمة عربية'], ['sun', 'شمس'], ['gear', 'ترس'], ['laurel', 'غار'], ['electric', 'صاعقة'], ['pearl', 'لؤلؤ'], ['hex', 'سداسي']];
   const VSTYLES = [['sweep', 'ذهبي دوّار', 'autorenew'], ['orn', 'زخرفة معدنية', 'star'], ['double', 'إطار مزدوج', 'crop_square']];
   const SHAPES = [['shield', 'درع', 'shield'], ['medal', 'وسام', 'military_tech']];
   let uid = 0;
@@ -54,7 +54,7 @@
     if (!name) return `<div class="av empty">؟</div>`;
     return `<div class="av" style="--h:${hue(name)}">${esc([...name][0])}${pic ? `<img src="${esc(pic)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}</div>`;
   }
-  const frame = (f, name, pic, icon) => `<div class="fr">${avatar(name, pic)}${frameSVG(f, icon)}</div>`;
+  const frame = (f, name, pic, icon) => f === 'medal' ? `<div class="fr fr-medal">${medal(0)}<div class="pd-av">${avatar(name, pic)}</div></div>` : `<div class="fr">${avatar(name, pic)}${frameSVG(f, icon)}</div>`;
   const txt = c => { const t = c.text || { color: '#ffffff', fx: 'none' }; return { cls: 'fx-' + (t.fx || 'none'), st: `--tc:${t.color || '#ffffff'}` }; };
 
   /* ---------- state ---------- */
@@ -76,6 +76,12 @@
       { id: 'glass', name: 'زجاجي شفاف', ic: 'blur_on', ...tp('glass', { panel: { o: 80, fx: 'glow' }, avatar: { fx: 'glow' } }) },
       { id: 'compact', name: 'مختصر', ic: 'compress', ...tp('octa', { panel: { h: 75 }, avatar: { s: 82 }, name: { s: 88 }, points: { s: 88 }, title: { s: 88 } }) }
     ],
+    podium: [
+      { id: 'ribbon', name: 'ميداليات بشريط', ic: 'workspace_premium', ...tp('podium') },
+      { id: 'ribbon-glow', name: 'ميداليات متوهجة', ic: 'flare', ...tp('podium', { avatar: { fx: 'glow' }, panel: { fx: 'both' } }) },
+      { id: 'ribbon-big', name: 'صور كبيرة', ic: 'zoom_in', ...tp('podium', { avatar: { s: 115 }, name: { s: 110 }, points: { s: 110 } }) },
+      { id: 'ribbon-clean', name: 'بدون شرائط', ic: 'radio_button_unchecked', ...tp('podium', { deco: { show: false } }) }
+    ],
     rows: [
       { id: 'pill', name: 'شريط لامع', ic: 'view_agenda', ...tp('pill') },
       { id: 'skew', name: 'شريط مائل', ic: 'texture', ...tp('skew', { panel: { fx: 'both' } }) },
@@ -84,10 +90,28 @@
       { id: 'slim', name: 'رفيع بصورة كبيرة', ic: 'horizontal_rule', ...tp('slim', { panel: { h: 75 }, avatar: { s: 125 }, name: { s: 90 } }) }
     ]
   };
+  function medal(i) {
+    const u = ++uid, G = `url(#pg${u})`, P = `url(#pp${u})`, Pd = `url(#pd${u})`;
+    let leaves = '';
+    for (let k = 0; k < 7; k++) { const a = 18 + k * 9, rad = a * Math.PI / 180, x = 150 + 112 * Math.cos(rad), y = 150 + 112 * Math.sin(rad); leaves += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="5" ry="13" transform="rotate(${a + 25} ${x.toFixed(1)} ${y.toFixed(1)})" fill="${G}" stroke="rgba(0,0,0,.35)" stroke-width=".8"/>`; }
+    return `<svg class="pd-svg" viewBox="0 0 300 300" aria-hidden="true"><defs>
+ <linearGradient id="pg${u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:color-mix(in srgb,var(--m) 45%,#000)"/><stop offset=".25" style="stop-color:color-mix(in srgb,var(--m) 25%,#fff)"/><stop offset=".45" style="stop-color:var(--m)"/><stop offset=".6" style="stop-color:color-mix(in srgb,var(--m) 55%,#000)"/><stop offset=".8" style="stop-color:color-mix(in srgb,var(--m) 20%,#fff)"/><stop offset="1" style="stop-color:color-mix(in srgb,var(--m) 50%,#000)"/><animateTransform attributeName="gradientTransform" type="rotate" from="0 .5 .5" to="360 .5 .5" dur="6s" repeatCount="indefinite"/></linearGradient>
+ <linearGradient id="pp${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:color-mix(in srgb,var(--p) 55%,#fff)"/><stop offset=".45" style="stop-color:var(--p)"/><stop offset="1" style="stop-color:color-mix(in srgb,var(--p) 45%,#000)"/></linearGradient>
+ <linearGradient id="pd${u}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:color-mix(in srgb,var(--p) 40%,#000)"/><stop offset="1" style="stop-color:var(--p)"/></linearGradient></defs>
+ <path class="pd-rib" d="M40 205 C 0 150 8 70 70 32 C 110 8 160 6 196 24 C 150 22 104 40 78 76 C 50 116 52 170 80 210 Z" fill="${P}" stroke="${G}" stroke-width="3.5"/>
+ <path class="pd-rib" d="M196 24 C 252 40 292 92 288 152 C 270 120 246 92 210 76 C 220 60 214 40 196 24 Z" fill="${Pd}" stroke="${G}" stroke-width="3.5"/>
+ <path class="pd-rib" d="M288 152 C 296 214 256 268 196 284 C 234 252 254 214 252 170 C 266 168 280 162 288 152 Z" fill="${P}" stroke="${G}" stroke-width="3.5"/>
+ <path class="pd-rib" d="M80 210 C 104 252 150 276 196 284 C 140 296 76 274 40 230 C 50 226 64 220 80 210 Z" fill="${Pd}" stroke="${G}" stroke-width="3.5"/>
+ <circle cx="150" cy="150" r="112" fill="none" stroke="${G}" stroke-width="12"/>
+ <circle cx="150" cy="150" r="104" fill="none" stroke="${P}" stroke-width="7"/>
+ <circle cx="150" cy="150" r="99" fill="none" stroke="${G}" stroke-width="4"/>
+ <g class="pd-laurel">${leaves}<path d="M196 248 C 230 228 254 200 262 168" fill="none" stroke="${G}" stroke-width="3"/></g>
+</svg>`;
+  }
   function boardParts(C) { const p = DEFP(), src = C.parts || {}; for (const k in p) Object.assign(p[k], src[k] || {}); return p; }
   function renderBoards() {
     const C = S.cfg.boards, t = txt(C), P = boardParts(C);
-    const style = C.style === 'rows' ? 'rows' : 'plaques';
+    const style = ['rows', 'podium'].includes(C.style) ? C.style : 'plaques';
     const shape = style === 'rows' ? (C.rowShape || 'pill') : (C.plaqueShape || 'octa');
     const pf = k => (P[k].fx && P[k].fx !== 'inherit') ? ' fx-' + P[k].fx : '';
     const v = (n) => n / 100;
@@ -96,6 +120,13 @@
     return `<div class="${cls}" style="--wf:'${esc(C.font)}';${t.st};--m:${C.gifters.metal};${vars}"><div class="bstack">` + ['gifters', 'tappers'].map(b => {
       const c = C[b], d = B[b] || [], unit = b === 'gifters' ? 'نقطة' : 'تكبيسة';
       const metals = [c.metal, c.metal2 || c.metal, c.metal3 || c.metal];
+      if (style === 'podium') {
+        const pc = c.podium || '#0b4d59', pos = [1, 0, 2];
+        return `<div class="board k-${b}${activeB === b ? ' on' : ''}" data-b="${b}" style="--l:${pc};--b:${pc};--p:${pc};--m:${c.metal}"><div class="b-title"><span class="tx${pf('title')}">${esc(c.title)}</span></div><div class="pd-row">` +
+          pos.map(i => { const u = d[i]; return `<div class="b-row pd r${i + 1}" data-u="${u ? esc(u.id + '|' + u.name + '|' + (u.pic || '')) : ''}" style="--m:${metals[i]}">
+   <div class="pd-med">${medal(i)}<div class="pd-av">${avatar(u && u.name, u && u.pic)}</div></div>
+   <div class="pd-plate"><div class="b-rank"><span class="tx${pf('rank')}">${esc(c.labels[i])}</span></div><div class="b-name tx${pf('name')}">${u ? esc(u.name) : 'بانتظار البطل'}</div><div class="b-pts"><b class="tx${pf('points')}">${u ? fmt(u.v) : 0}</b></div></div></div>`; }).join('') + `</div></div>`;
+      }
       return `<div class="board k-${b}${activeB === b ? ' on' : ''}" data-b="${b}" style="--l:${c.lead};--b:${c.base};--m:${c.metal}"><div class="b-title"><span class="tx${pf('title')}">${esc(c.title)}</span></div>` +
         [0, 1, 2].map(i => {
           const u = d[i], fr = frame(c.frame, u && u.name, u && u.pic, ICONS[b][i]);
@@ -116,12 +147,15 @@
     for (const b of ['gifters', 'tappers']) {
       const bd = el.querySelector(`.board[data-b="${b}"]`); if (!bd) continue;
       const d = B[b] || [], c = S.cfg.boards[b];
-      bd.querySelectorAll('.b-row').forEach((row, i) => {
+      bd.querySelectorAll('.b-row').forEach((row, i0) => {
+        const i = +(row.className.match(/\br(\d)\b/) || [0, i0 + 1])[1] - 1;
         const u = d[i];
         const id = u ? u.id + '|' + u.name + '|' + (u.pic || '') : '';
         if (row.dataset.u !== id) {
           row.dataset.u = id;
-          row.querySelector('.fr').outerHTML = frame(c.frame, u && u.name, u && u.pic, ICONS[b][i]);
+          const rk = +(row.className.match(/\br(\d)\b/) || [0, i + 1])[1] - 1, ux = d[rk];
+          if (row.classList.contains('pd')) { row.querySelector('.pd-av').innerHTML = avatar(ux && ux.name, ux && ux.pic); }
+          else row.querySelector('.fr').outerHTML = frame(c.frame, u && u.name, u && u.pic, ICONS[b][i]);
           row.querySelector('.b-name').textContent = u ? u.name : 'بانتظار البطل';
           if (u) { row.classList.remove('swap'); void row.offsetWidth; row.classList.add('swap'); setTimeout(() => row.classList.remove('swap'), 850); }
         } else if (u) row.querySelector('.b-name').textContent = u.name;
