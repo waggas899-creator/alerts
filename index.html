@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>أليرتات وقاص</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=Cairo:wght@600;800;900&family=El+Messiri:wght@600;700&family=Lalezar&family=Reem+Kufi:wght@600;700&family=Tajawal:wght@500;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block">
+<link rel="stylesheet" href="widgets.css">
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:transparent}
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;display:inline-block;white-space:nowrap;direction:ltr;font-feature-settings:'liga'}
+#stage{position:absolute;left:0;top:0;transform-origin:0 0;overflow:hidden}
+</style>
+</head>
+<body>
+<div id="stage" class="show"></div>
+<div id="off" hidden style="position:fixed;left:20px;top:20px;padding:14px 22px;border-radius:12px;background:#6b1427;color:#fff;font:700 28px Cairo,sans-serif;direction:rtl">برنامج أليرتات وقاص مقفول — شغّله في الكمبيوتر</div>
+<div id="ok" hidden style="position:fixed;left:20px;top:20px;padding:14px 22px;border-radius:12px;background:#0b4d59;color:#fff;font:700 28px Cairo,sans-serif;direction:rtl">✅ متصل ببرنامج أليرتات وقاص</div>
+<script src="widgets.js"></script>
+<script>
+(function () {
+  const DIM = { v: [1080, 1920], h: [1920, 1080] };
+  // Hosted on GitHub Pages: ?o=v | ?o=h | (none = auto) · ?w=boards|gift|tap|vip|honor
+  const qs = new URLSearchParams(location.search);
+  const LOCAL = 'http://127.0.0.1:' + (qs.get('port') || '7373');
+  window.MEDIA_BASE = LOCAL;
+  const only = ['boards', 'gift', 'tap', 'vip', 'honor'].includes(qs.get('w')) ? qs.get('w') : null;
+  const fixed = !only && (qs.get('o') === 'v' || qs.get('o') === 'h') ? qs.get('o') : null;
+  const auto = () => innerHeight >= innerWidth ? 'v' : 'h';
+  let orient = fixed || (only && qs.get('o') === 'h' ? 'h' : null) || auto();
+  const stage = document.getElementById('stage');
+  W.init(stage, { edit: false, only });
+  W.setOrient(orient);
+
+  function fit() {
+    let w, h;
+    if (only) { w = W.BASE[only].w; const el = stage.querySelector('.w'); h = W.BASE[only].h || (el ? el.offsetHeight : 900); }
+    else[w, h] = DIM[orient];
+    stage.style.width = w + 'px'; stage.style.height = h + 'px';
+    const k = Math.min(innerWidth / w, innerHeight / h);
+    stage.style.transform = `scale(${k})`;
+    stage.style.setProperty('--k', k);
+  }
+  addEventListener('resize', () => { if (!fixed && !only) { const o = auto(); if (o !== orient) { orient = o; W.setOrient(o); } } fit(); });
+
+  let ws, retry = 1000;
+  function connect() {
+    ws = new WebSocket(LOCAL.replace('http', 'ws') + '/ws');
+    ws.onerror = () => { const n = document.getElementById('off'); if (n && qs.has('debug')) n.hidden = false; };
+    ws.onopen = () => { retry = 1000; const n = document.getElementById('off'); if (n) n.hidden = true; const k = document.getElementById('ok'); if (k && qs.has('debug')) { k.hidden = false; setTimeout(() => k.hidden = true, 6000); } };
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'init') { W.setSettings(msg.settings, true); W.setBoards(msg.boards); W.setOrient(orient); fit(); setTimeout(fit, 300); }
+      else if (msg.type === 'settings') { W.setSettings(msg.settings); W.setOrient(orient); fit(); }
+      else if (msg.type === 'boards') W.setBoards(msg.boards);
+      else if (msg.type === 'alert') W.alert(msg.id, msg.data);
+      else if (msg.type === 'hide') W.hide(msg.id);
+      else if (msg.type === 'flip') W.flip();
+    };
+    ws.onclose = () => { setTimeout(connect, retry); retry = Math.min(retry * 2, 10000); };
+  }
+  connect();
+})();
+</script>
+</body>
+</html>
