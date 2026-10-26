@@ -103,10 +103,10 @@
           const pts = `<div class="b-pts"><b class="tx${pf('points')}">${u ? fmt(u.v) : 0}</b><small class="tx${pf('points')}">${unit}</small></div>`;
           const rank = `<div class="b-rank"><span class="tx${pf('rank')}">${esc(c.labels[i])}</span></div>`;
           const chain = style === 'plaques' && i > 0 ? `<div class="chains" style="--m:${metals[i - 1]}"><i></i><i></i></div>` : '';
-          if (style === 'plaques') return `${chain}<div class="b-row pq r${i + 1}" data-u="${u ? esc(u.id) : ''}" style="--m:${metals[i]}">
+          if (style === 'plaques') return `${chain}<div class="b-row pq r${i + 1}" data-u="${u ? esc(u.id + '|' + u.name + '|' + (u.pic || '')) : ''}" style="--m:${metals[i]}">
    <div class="pq-bg"><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i></div><i class="gem gl"></i><i class="gem gr"></i><i class="gem gb"></i>
    ${rank}<div class="pq-av">${fr}</div>${name}${pts}</div>`;
-          return `<div class="b-row rw r${i + 1}" data-u="${u ? esc(u.id) : ''}" style="--m:${metals[i]}"><i class="rbg"></i>${fr}
+          return `<div class="b-row rw r${i + 1}" data-u="${u ? esc(u.id + '|' + u.name + '|' + (u.pic || '')) : ''}" style="--m:${metals[i]}"><i class="rbg"></i>${fr}
    <div class="b-info">${rank}${name}</div>${pts}</div>`;
         }).join('') + `</div>`;
     }).join('') + `</div></div>`;
@@ -118,7 +118,7 @@
       const d = B[b] || [], c = S.cfg.boards[b];
       bd.querySelectorAll('.b-row').forEach((row, i) => {
         const u = d[i];
-        const id = u ? u.id : '';
+        const id = u ? u.id + '|' + u.name + '|' + (u.pic || '') : '';
         if (row.dataset.u !== id) {
           row.dataset.u = id;
           row.querySelector('.fr').outerHTML = frame(c.frame, u && u.name, u && u.pic, ICONS[b][i]);

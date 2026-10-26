@@ -11,25 +11,29 @@
 html,body{margin:0;height:100%;overflow:hidden;background:transparent}
 .ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;display:inline-block;white-space:nowrap;direction:ltr;font-feature-settings:'liga'}
 #stage{position:absolute;left:0;top:0;transform-origin:0 0;overflow:hidden}
+.note{position:fixed;left:3vmin;top:3vmin;padding:2vmin 3.5vmin;border-radius:2vmin;color:#fff;font:700 4vmin/1.5 Cairo,sans-serif;direction:rtl;z-index:9}
+#off{background:#6b1427}#ok{background:#0b4d59}
 </style>
 </head>
 <body>
 <div id="stage" class="show"></div>
-<div id="off" hidden style="position:fixed;left:20px;top:20px;padding:14px 22px;border-radius:12px;background:#6b1427;color:#fff;font:700 28px Cairo,sans-serif;direction:rtl">برنامج أليرتات وقاص مقفول — شغّله في الكمبيوتر</div>
-<div id="ok" hidden style="position:fixed;left:20px;top:20px;padding:14px 22px;border-radius:12px;background:#0b4d59;color:#fff;font:700 28px Cairo,sans-serif;direction:rtl">✅ متصل ببرنامج أليرتات وقاص</div>
+<div id="off" class="note" hidden>في انتظار برنامج أليرتات وقاص…</div>
+<div id="ok" class="note" hidden>✅ متصل ببرنامج أليرتات وقاص</div>
+<script src="mqtt-lite.js"></script>
 <script src="widgets.js"></script>
 <script>
 (function () {
   const DIM = { v: [1080, 1920], h: [1920, 1080] };
-  // Hosted on GitHub Pages: ?o=v | ?o=h | (none = auto) · ?w=boards|gift|tap|vip|honor
   const qs = new URLSearchParams(location.search);
-  const LOCAL = 'http://127.0.0.1:' + (qs.get('port') || '7373');
-  window.MEDIA_BASE = LOCAL;
+  const room = (qs.get('r') || '').replace(/[^\w-]/g, '');
+  const debug = qs.has('debug');
   const only = ['boards', 'gift', 'tap', 'vip', 'honor'].includes(qs.get('w')) ? qs.get('w') : null;
-  const fixed = !only && (qs.get('o') === 'v' || qs.get('o') === 'h') ? qs.get('o') : null;
+  const fixed = qs.get('o') === 'v' || qs.get('o') === 'h' ? qs.get('o') : null;
   const auto = () => innerHeight >= innerWidth ? 'v' : 'h';
-  let orient = fixed || (only && qs.get('o') === 'h' ? 'h' : null) || auto();
+  let orient = fixed || auto();
   const stage = document.getElementById('stage');
+  const off = document.getElementById('off'), ok = document.getElementById('ok');
+  if (!room) { off.textContent = 'الرابط ناقص: انسخه من برنامج أليرتات وقاص'; off.hidden = false; return; }
   W.init(stage, { edit: false, only });
   W.setOrient(orient);
 
@@ -39,28 +43,38 @@ html,body{margin:0;height:100%;overflow:hidden;background:transparent}
     else[w, h] = DIM[orient];
     stage.style.width = w + 'px'; stage.style.height = h + 'px';
     const k = Math.min(innerWidth / w, innerHeight / h);
-    stage.style.transform = `scale(${k})`;
-    stage.style.setProperty('--k', k);
+    stage.style.transform = `scale(${k})`; stage.style.setProperty('--k', k);
   }
   addEventListener('resize', () => { if (!fixed && !only) { const o = auto(); if (o !== orient) { orient = o; W.setOrient(o); } } fit(); });
 
-  let ws, retry = 1000;
-  function connect() {
-    ws = new WebSocket(LOCAL.replace('http', 'ws') + '/ws');
-    ws.onerror = () => { const n = document.getElementById('off'); if (n && qs.has('debug')) n.hidden = false; };
-    ws.onopen = () => { retry = 1000; const n = document.getElementById('off'); if (n) n.hidden = true; const k = document.getElementById('ok'); if (k && qs.has('debug')) { k.hidden = false; setTimeout(() => k.hidden = true, 6000); } };
-    ws.onmessage = (e) => {
-      const msg = JSON.parse(e.data);
-      if (msg.type === 'init') { W.setSettings(msg.settings, true); W.setBoards(msg.boards); W.setOrient(orient); fit(); setTimeout(fit, 300); }
-      else if (msg.type === 'settings') { W.setSettings(msg.settings); W.setOrient(orient); fit(); }
-      else if (msg.type === 'boards') W.setBoards(msg.boards);
-      else if (msg.type === 'alert') W.alert(msg.id, msg.data);
-      else if (msg.type === 'hide') W.hide(msg.id);
-      else if (msg.type === 'flip') W.flip();
-    };
-    ws.onclose = () => { setTimeout(connect, retry); retry = Math.min(retry * 2, 10000); };
+  let haveSettings = false, lastSettings = '', lastBoards = '';
+  const seen = new Set(), order = [];
+  let waitT = setTimeout(() => { if (debug && !haveSettings) off.hidden = false; }, 4000);
+  function onMsg(topic, payload) {
+    const kind = topic.split('/')[2];
+    if (kind === 'settings') {
+      if (payload === lastSettings) return; lastSettings = payload;
+      const s = JSON.parse(payload); const first = !haveSettings; haveSettings = true;
+      W.setSettings(s, first); W.setOrient(orient); fit(); setTimeout(fit, 300);
+      off.hidden = true; clearTimeout(waitT);
+      if (first && debug) { ok.hidden = false; setTimeout(() => ok.hidden = true, 6000); }
+    } else if (kind === 'boards') {
+      if (payload === lastBoards || !haveSettings) { lastBoards = payload; return; }
+      lastBoards = payload; W.setBoards(JSON.parse(payload));
+    } else if (kind === 'ev' && haveSettings) {
+      const m = JSON.parse(payload);
+      if (m.eid) { if (seen.has(m.eid)) return; seen.add(m.eid); order.push(m.eid); if (order.length > 300) seen.delete(order.shift()); }
+      if (m.type === 'alert') W.alert(m.id, m.data);
+      else if (m.type === 'hide') W.hide(m.id);
+      else if (m.type === 'flip') W.flip();
+    }
   }
-  connect();
+  const pendingBoards = () => { if (haveSettings && lastBoards) W.setBoards(JSON.parse(lastBoards)); };
+  for (const url of (qs.get('broker') ? [qs.get('broker')] : MqttLite.BROKERS)) {
+    const c = new MqttLite(url);
+    c.on('connect', () => c.subscribe(`wagas/${room}/#`));
+    c.on('message', (t, p) => { try { const had = haveSettings; onMsg(t, p); if (!had && haveSettings) pendingBoards(); } catch (e) { } });
+  }
 })();
 </script>
 </body>
